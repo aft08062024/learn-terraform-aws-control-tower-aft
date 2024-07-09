@@ -13,6 +13,11 @@ provider "aws" {
   profile = "audit" 
 }
 
+provider "aws" {
+  alias   = "controller"
+  # Use "aws configure" to create the "controller" profile with the Audit account credentials
+  profile = "controller" 
+}
 
 terraform {
   backend "s3" {
@@ -96,4 +101,22 @@ resource "aws_securityhub_finding_aggregator" "this" {
   linking_mode = "SPECIFIED_REGIONS"
   specified_regions = ["us-west-2"]
   depends_on   = [aws_securityhub_account.audit]
+}
+
+# makes an account a security hub member
+module "security-hub_organizations_member" {
+  source  = "aws-ia/security-hub/aws//modules/organizations_member"
+  version = "0.0.1"
+
+  providers = {
+    aws.member = aws.controller
+  }
+
+  member_config = [{
+  account_id = "637423428355"
+  email      = "controller@aws-lab.business"
+    invite     = false
+  }]
+
+  depends_on = [module.security-hub]
 }
